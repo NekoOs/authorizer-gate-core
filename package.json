@@ -1,0 +1,15 @@
+{
+  "name": "authorizer-gate-core",
+  "version": "0.1.0",
+  "description": "Authorization library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "authorization",
+    "gate"
+  ],
+  "author": "Neder Alfonso Fandiño Andrade",
+  "license": "ISC"
+}
