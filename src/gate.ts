@@ -1,15 +1,37 @@
-import {isNotNullish, isNullish} from "./utils.js";
+import {isNotNullish, isNullish} from "./utils";
+import Store from "./store";
+
+type UserNullish = object | null | undefined;
+type GateHook = (user: UserNullish, ability: string, ...args: any[]) => boolean | void;
+type GateDefinition = (user: UserNullish, ...args: any[]) => boolean | void;
+type GateAbilities = { [ability: string]: GateDefinition };
+
+interface GateOptions {
+    user: UserNullish;
+    store: Store;
+    abilities?: GateAbilities;
+    beforeCallbacks?: GateHook[];
+    afterCallbacks?: GateHook[];
+}
 
 class Gate {
-    #abilities = {};
-    #beforeCallbacks = [];
-    #afterCallbacks = [];
-    #user;
-    #userPromise;
-    #store;
-    #committer;
+    readonly #abilities: GateAbilities = {};
+    readonly #beforeCallbacks: GateHook[] = [];
+    readonly #afterCallbacks: GateHook[] = [];
+    #user: UserNullish;
+    #userPromise!: Promise<UserNullish>;
+    readonly #store: Store;
+    #committer?: Function;
 
-    constructor({user, abilities = {}, beforeCallbacks = [], afterCallbacks = [], store} = {}) {
+    constructor(
+        {
+            store,
+            user,
+            abilities = {},
+            beforeCallbacks = [],
+            afterCallbacks = []
+        }: GateOptions
+    ) {
         this.setUser(user);
         this.#abilities = abilities;
         this.#beforeCallbacks = beforeCallbacks;
@@ -18,22 +40,20 @@ class Gate {
         return this;
     }
 
-    isUserPending() {
+    isUserPending(): boolean {
         return isNullish(this.#user);
     }
 
-    resolveUser() {
+    resolveUser(): Promise<UserNullish> {
         return this.#userPromise;
     }
 
-    getUser() {
+    getUser(): UserNullish {
         return this.#user;
     }
 
-    setUser(user) {
-        const isUserPromise = user instanceof Promise;
-
-        if (isUserPromise) {
+    setUser(user: object | Promise<UserNullish> | UserNullish) {
+        if (user instanceof Promise) {
             this.#user = null;
             this.#userPromise = user;
         } else {
@@ -50,7 +70,7 @@ class Gate {
         return this;
     }
 
-    forUser(user) {
+    forUser(user: object) {
         return new Gate({
             user,
             abilities: this.#abilities,
@@ -60,47 +80,47 @@ class Gate {
         })
     }
 
-    before(callback) {
+    before(callback: GateHook) {
         this.#beforeCallbacks.push(callback);
     }
 
-    after(callback) {
+    after(callback: GateHook) {
         this.#afterCallbacks.push(callback);
     }
 
-    committer(callback) {
+    committer(callback: (currentGate: Gate, force: boolean) => any) {
         this.#committer = callback;
     }
 
-    define(ability, callback) {
+    define(ability: string, callback: GateDefinition) {
         this.#abilities[ability] = callback;
     }
 
-    allows(ability, ...args) {
+    allows(ability: string, ...args: any[]) {
         return !!this.raw(ability, ...args);
     }
 
-    denies(ability, ...args) {
+    denies(ability: string, ...args: any[]) {
         return !this.allows(ability, ...args);
     }
 
-    check(abilities, ...args) {
+    check(abilities: string[], ...args: any[]) {
         return abilities.every((ability) => this.allows(ability, ...args));
     }
 
-    any(abilities, ...args) {
+    any(abilities: string[], ...args: any[]) {
         return abilities.some((ability) => this.allows(ability, ...args));
     }
 
-    none(abilities, ...args) {
+    none(abilities: string[], ...args: any[]) {
         return !this.any(abilities, ...args);
     }
 
-    doesntHavePersistence(key) {
-        return this.#store.get(key).isUserPending();
+    doesntHavePersistence() {
+        return this.#store.get()?.isUserPending();
     }
 
-    async persist({force = false} = {}) {
+    async persist(force = false) {
         if (this.isUserPending()) {
             await this.resolveUser();
         }
@@ -108,14 +128,14 @@ class Gate {
         return this;
     }
 
-    raw(ability, ...args) {
+    raw(ability: string, ...args: any[]) {
         let result = this.#callBeforeCallbacks(this.#user, ability, args)
-            ?? this.#abilities?.[ability]?.(this.#user, ability, ...args);
+            ?? this.#abilities?.[ability]?.(this.#user, ...args);
 
         return this.#callAfterCallbacks(this.#user, ability, args, result);
     }
 
-    #callBeforeCallbacks(user, ability, args) {
+    #callBeforeCallbacks(user: UserNullish, ability: string, args: any[]) {
         for (const before of this.#beforeCallbacks) {
             let response = before(user, ability, ...args);
             if (isNotNullish(response)) {
@@ -124,9 +144,9 @@ class Gate {
         }
     }
 
-    #callAfterCallbacks(user, ability, args, result) {
+    #callAfterCallbacks(user: UserNullish, ability: string, args: any[], result: any) {
         for (const after of this.#afterCallbacks) {
-            let afterResult = after({}, ability, result, ...args);
+            let afterResult = after(user, ability, result, ...args);
             result ??= afterResult;
         }
         return result;

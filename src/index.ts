@@ -1,13 +1,13 @@
-import Gate from "./gate.js";
-import Store from "./store.js";
-import {isNullish} from "./utils.js";
+import Gate from "./gate";
+import Store from "./store";
+import {isNullish} from "./utils";
 
 const store = new Store();
 
 function getStoredGate() {
-    let gate = store.get();
+    let gate: Gate|undefined = store.get();
     if (isNullish(gate)) {
-        gate = new Gate({store});
+        gate = new Gate({user: undefined, store});
         store.set(gate);
     }
     if (!(gate instanceof Gate)) {
