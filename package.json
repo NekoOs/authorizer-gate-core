@@ -1,6 +1,6 @@
 {
   "name": "authorizer-gate-core",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "description": "Authorization library",
   "main": "./lib/cjs/index.js",
   "scripts": {
@@ -17,6 +17,14 @@
   ],
   "author": "Neder Alfonso Fandiño Andrade",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NekoOs/authorizer-gate-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NekoOs/authorizer-gate-core/issues"
+  },
+  "homepage": "https://github.com/NekoOs/authorizer-gate-core#readme",
   "devDependencies": {
     "typescript": "^4.9.5"
   },
